@@ -15,41 +15,20 @@ def get_db():
     finally:
         db.close()
 
-# @router.post("/signup", response_model=dict)
-# def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
-#     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
-#     if existing_user:
-#         raise HTTPException(status_code=400, detail="Email already registered")
-
-#     hashed_password = utils.hash_password(user.password)
-#     new_user = models.User(email=user.email, hashed_password=hashed_password, role="Ops")
-#     db.add(new_user)
-#     db.commit()
-#     db.refresh(new_user)
-
-#     encrypted_url = utils.encrypt_url(user.email)
-#     return {"message": "User created", "encrypted_url": encrypted_url}
-
 @router.post("/signup", response_model=dict)
 def signup(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    # Check if the email already exists in the database
+
     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Hash the password before storing it
     hashed_password = utils.hash_password(user.password)
-
-    # Create the new user with the role passed in the request
     new_user = models.User(email=user.email, hashed_password=hashed_password, role=user.role)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-
-    # Encrypt the email for some URL-related purpose (e.g., for the verification link)
     encrypted_url = utils.encrypt_url(user.email)
 
-    # Send verification email in the background
     verification_link = f"http://yourfrontend.com/verify/{encrypted_url}"
     send_verification_email(user.email, verification_link, background_tasks)
 
